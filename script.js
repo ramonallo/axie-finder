@@ -1,11 +1,7 @@
-// === Configuração dos proxies alternativos ===
-const proxies = [
-  "https://thingproxy.freeboard.io/fetch/",
-  "https://api.allorigins.win/raw?url=",
-  "https://corsproxy.io/?"
-];
+// script.js — versão otimizada para proxy interno da Vercel (api/axies)
 
-const url = "https://graphql-gateway.axieinfinity.com/graphql";
+document.getElementById("buscar").addEventListener("click", buscarAxies);
+buscarAxies(); // executa busca inicial
 
 async function buscarAxies() {
   const classeFiltro = document.getElementById("classe").value;
@@ -16,64 +12,53 @@ async function buscarAxies() {
   status.textContent = "🔄 Buscando Axies...";
   resultados.innerHTML = "";
 
-  const query = `
-  {
-    axies(from:0, size:50, sort:PriceAsc) {
-      results {
-        id
-        name
-        class
-        image
-        auction { currentPriceUSD }
-        parts { name class type }
+  const queryBody = {
+    query: `{
+      axies(from:0, size:100, sort:PriceAsc) {
+        results {
+          id
+          name
+          class
+          image
+          auction { currentPriceUSD }
+          parts { name class type }
+        }
       }
+    }`
+  };
+
+  try {
+    // 🔥 Chama a função serverless da Vercel (sem CORS)
+    const res = await fetch("/api/axies", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(queryBody)
+    });
+
+    const text = await res.text();
+    const data = JSON.parse(text);
+
+    let axies = data.data.axies.results.filter(a =>
+      a.auction?.currentPriceUSD &&
+      parseFloat(a.auction.currentPriceUSD) <= precoMax
+    );
+
+    if (classeFiltro) {
+      axies = axies.filter(a => a.class === classeFiltro);
     }
-  }`;
 
-  let data = null;
-  let success = false;
-
-  for (let proxy of proxies) {
-    try {
-      const res = await fetch(proxy + url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query })
-      });
-
-      // Se o retorno não for JSON, tenta o próximo proxy
-      data = await res.json();
-      if (!data || !data.data) throw new Error("Resposta inválida");
-
-      success = true;
-      console.log("✅ Conectado via:", proxy);
-      break;
-    } catch (err) {
-      console.warn("❌ Falha no proxy:", proxy, err.message);
+    if (axies.length === 0) {
+      status.textContent = "⚠️ Nenhum Axie encontrado para esses filtros.";
+      return;
     }
+
+    status.textContent = `✅ ${axies.length} Axies encontrados`;
+    mostrarAxies(axies);
+
+  } catch (err) {
+    console.error("Erro ao buscar Axies:", err);
+    status.textContent = "❌ Erro ao buscar dados. Verifique o console.";
   }
-
-  if (!success) {
-    status.textContent = "⚠️ Todos os proxies estão offline. Tente novamente em alguns minutos.";
-    return;
-  }
-
-  let axies = data.data.axies.results.filter(a =>
-    a.auction?.currentPriceUSD &&
-    parseFloat(a.auction.currentPriceUSD) <= precoMax
-  );
-
-  if (classeFiltro) {
-    axies = axies.filter(a => a.class === classeFiltro);
-  }
-
-  if (axies.length === 0) {
-    status.textContent = "Nenhum Axie encontrado.";
-    return;
-  }
-
-  status.textContent = `✅ ${axies.length} Axies encontrados`;
-  mostrarAxies(axies);
 }
 
 function calcularMetaScore(axie) {
@@ -91,14 +76,18 @@ function calcularMetaScore(axie) {
 function mostrarAxies(axies) {
   const container = document.getElementById("resultados");
   container.innerHTML = "";
+  
   const melhores = axies.sort((a, b) => a.auction.currentPriceUSD - b.auction.currentPriceUSD);
+  
   melhores.forEach(a => {
     const meta = calcularMetaScore(a);
-    const tag = meta >= 85 && a.auction.currentPriceUSD <= 5
-      ? `<span class="tag raro">🏆 Achado Raro</span>`
-      : meta >= 70
-      ? `<span class="tag meta-alto">🔥 Meta</span>`
-      : "";
+    const tag =
+      meta >= 85 && a.auction.currentPriceUSD <= 5
+        ? `<span class="tag raro">🏆 Achado Raro</span>`
+        : meta >= 70
+        ? `<span class="tag meta-alto">🔥 Meta</span>`
+        : "";
+
     container.innerHTML += `
       <div class="axie-card">
         <img src="${a.image}" alt="${a.name}">
@@ -112,6 +101,3 @@ function mostrarAxies(axies) {
     `;
   });
 }
-
-document.getElementById("buscar").addEventListener("click", buscarAxies);
-buscarAxies(); // busca inicial
