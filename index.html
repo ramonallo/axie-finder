@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Axie Finder — Online</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>🔍 Axie Finder — Busca Online</h1>
+  <div class="filtros">
+    <label>
+      Classe:
+      <select id="classe">
+        <option value="">Todas</option>
+        <option value="Beast">Beast</option>
+        <option value="Plant">Plant</option>
+        <option value="Aqua">Aqua</option>
+        <option value="Bird">Bird</option>
+        <option value="Bug">Bug</option>
+        <option value="Reptile">Reptile</option>
+        <option value="Mech">Mech</option>
+        <option value="Dusk">Dusk</option>
+        <option value="Dawn">Dawn</option>
+      </select>
+    </label>
+
+    <label>
+      Preço máximo (USD):
+      <input type="number" id="precoMax" value="10" min="1" step="0.5" />
+    </label>
+
+    <button id="buscar">🔍 Buscar</button>
+  </div>
+
+  <p id="status">Carregando...</p>
+  <div id="resultados" class="axie-grid"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
