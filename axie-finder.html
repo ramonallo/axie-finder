@@ -11,63 +11,32 @@
     font-family: "Segoe UI", sans-serif;
     padding: 20px;
   }
-  h1 {
-    text-align: center;
-    color: #58a6ff;
-  }
+  h1 { text-align: center; color: #58a6ff; }
   .filtros {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    flex-wrap: wrap;
+    display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
     margin-bottom: 20px;
   }
   select, input, button {
-    background-color: #161b22;
-    color: #e6edf3;
-    border: 1px solid #30363d;
-    border-radius: 8px;
-    padding: 8px 12px;
-    font-size: 15px;
+    background-color: #161b22; color: #e6edf3;
+    border: 1px solid #30363d; border-radius: 8px;
+    padding: 8px 12px; font-size: 15px;
   }
   button {
-    cursor: pointer;
-    background-color: #238636;
-    border: none;
-    font-weight: bold;
+    cursor: pointer; background-color: #238636; border: none; font-weight: bold;
   }
-  button:hover {
-    background-color: #2ea043;
-  }
+  button:hover { background-color: #2ea043; }
   .axie-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 15px;
   }
   .axie-card {
-    background: #161b22;
-    border-radius: 12px;
-    padding: 12px;
-    text-align: center;
-    box-shadow: 0 0 10px #0004;
-    transition: transform 0.2s;
+    background: #161b22; border-radius: 12px; padding: 12px; text-align: center;
+    box-shadow: 0 0 10px #0004; transition: transform 0.2s;
   }
-  .axie-card:hover {
-    transform: scale(1.03);
-  }
-  .axie-card img {
-    width: 100%;
-    border-radius: 12px;
-  }
-  .meta {
-    color: #9ecbff;
-    font-weight: bold;
-  }
-  .tag {
-    font-weight: bold;
-    display: inline-block;
-    margin-top: 4px;
-  }
+  .axie-card:hover { transform: scale(1.03); }
+  .axie-card img { width: 100%; border-radius: 12px; }
+  .meta { color: #9ecbff; font-weight: bold; }
+  .tag { font-weight: bold; display: inline-block; margin-top: 4px; }
   .raro { color: #00ff95; }
   .meta-alto { color: #ffd700; }
 </style>
@@ -76,8 +45,7 @@
 <h1>🔍 Axie Finder — Busca Avançada</h1>
 
 <div class="filtros">
-  <label>
-    Classe:
+  <label>Classe:
     <select id="classe">
       <option value="">Todas</option>
       <option value="Beast">Beast</option>
@@ -91,12 +59,9 @@
       <option value="Dawn">Dawn</option>
     </select>
   </label>
-
-  <label>
-    Preço máximo (USD):
+  <label>Preço máximo (USD):
     <input type="number" id="precoMax" value="10" min="1" step="0.5">
   </label>
-
   <button id="buscar">🔍 Buscar</button>
 </div>
 
@@ -136,17 +101,15 @@ async function buscarAxies() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query })
     });
-    const data = await res.json();
+    const text = await res.text();
+    const data = JSON.parse(text);
 
     let axies = data.data.axies.results.filter(a =>
       a.auction?.currentPriceUSD &&
       parseFloat(a.auction.currentPriceUSD) <= precoMax
     );
 
-    if (classeFiltro) {
-      axies = axies.filter(a => a.class === classeFiltro);
-    }
-
+    if (classeFiltro) axies = axies.filter(a => a.class === classeFiltro);
     if (axies.length === 0) {
       status.textContent = "Nenhum Axie encontrado para esses filtros.";
       return;
@@ -181,8 +144,7 @@ function mostrarAxies(axies) {
     const tag = meta >= 85 && a.auction.currentPriceUSD <= 5
       ? `<span class="tag raro">🏆 Achado Raro</span>`
       : meta >= 70
-      ? `<span class="tag meta-alto">🔥 Meta</span>`
-      : "";
+      ? `<span class="tag meta-alto">🔥 Meta</span>` : "";
     container.innerHTML += `
       <div class="axie-card">
         <img src="${a.image}" alt="${a.name}">
@@ -198,7 +160,7 @@ function mostrarAxies(axies) {
 }
 
 document.getElementById("buscar").addEventListener("click", buscarAxies);
-buscarAxies(); // busca inicial
+buscarAxies();
 </script>
 </body>
 </html>
