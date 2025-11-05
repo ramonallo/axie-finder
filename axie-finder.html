@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Axie Finder — Busca Avançada</title>
+<style>
+  body {
+    background-color: #0d1117;
+    color: #e6edf3;
+    font-family: "Segoe UI", sans-serif;
+    padding: 20px;
+  }
+  h1 {
+    text-align: center;
+    color: #58a6ff;
+  }
+  .filtros {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  select, input, button {
+    background-color: #161b22;
+    color: #e6edf3;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 15px;
+  }
+  button {
+    cursor: pointer;
+    background-color: #238636;
+    border: none;
+    font-weight: bold;
+  }
+  button:hover {
+    background-color: #2ea043;
+  }
+  .axie-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 15px;
+  }
+  .axie-card {
+    background: #161b22;
+    border-radius: 12px;
+    padding: 12px;
+    text-align: center;
+    box-shadow: 0 0 10px #0004;
+    transition: transform 0.2s;
+  }
+  .axie-card:hover {
+    transform: scale(1.03);
+  }
+  .axie-card img {
+    width: 100%;
+    border-radius: 12px;
+  }
+  .meta {
+    color: #9ecbff;
+    font-weight: bold;
+  }
+  .tag {
+    font-weight: bold;
+    display: inline-block;
+    margin-top: 4px;
+  }
+  .raro { color: #00ff95; }
+  .meta-alto { color: #ffd700; }
+</style>
+</head>
+<body>
+<h1>🔍 Axie Finder — Busca Avançada</h1>
+
+<div class="filtros">
+  <label>
+    Classe:
+    <select id="classe">
+      <option value="">Todas</option>
+      <option value="Beast">Beast</option>
+      <option value="Plant">Plant</option>
+      <option value="Aqua">Aqua</option>
+      <option value="Bird">Bird</option>
+      <option value="Bug">Bug</option>
+      <option value="Reptile">Reptile</option>
+      <option value="Mech">Mech</option>
+      <option value="Dusk">Dusk</option>
+      <option value="Dawn">Dawn</option>
+    </select>
+  </label>
+
+  <label>
+    Preço máximo (USD):
+    <input type="number" id="precoMax" value="10" min="1" step="0.5">
+  </label>
+
+  <button id="buscar">🔍 Buscar</button>
+</div>
+
+<p id="status">Carregando...</p>
+<div id="resultados" class="axie-grid"></div>
+
+<script>
+const proxy = "https://api.allorigins.win/raw?url=";
+const url = "https://graphql-gateway.axieinfinity.com/graphql";
+
+async function buscarAxies() {
+  const classeFiltro = document.getElementById("classe").value;
+  const precoMax = parseFloat(document.getElementById("precoMax").value);
+  const status = document.getElementById("status");
+  const resultados = document.getElementById("resultados");
+
+  status.textContent = "🔄 Buscando Axies...";
+  resultados.innerHTML = "";
+
+  const query = `
+  {
+    axies(from:0, size:100, sort:PriceAsc) {
+      results {
+        id
+        name
+        class
+        image
+        auction { currentPriceUSD }
+        parts { name class type }
+      }
+    }
+  }`;
+
+  try {
+    const res = await fetch(proxy + encodeURIComponent(url), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query })
+    });
+    const data = await res.json();
+
+    let axies = data.data.axies.results.filter(a =>
+      a.auction?.currentPriceUSD &&
+      parseFloat(a.auction.currentPriceUSD) <= precoMax
+    );
+
+    if (classeFiltro) {
+      axies = axies.filter(a => a.class === classeFiltro);
+    }
+
+    if (axies.length === 0) {
+      status.textContent = "Nenhum Axie encontrado para esses filtros.";
+      return;
+    }
+
+    status.textContent = `✅ ${axies.length} Axies encontrados`;
+    mostrarAxies(axies);
+  } catch (err) {
+    status.textContent = "❌ Erro ao buscar dados. Tente novamente.";
+    console.error(err);
+  }
+}
+
+function calcularMetaScore(axie) {
+  const tipos = axie.parts.map(p => p.type);
+  let score = 50;
+  if (tipos.includes("Horn")) score += 5;
+  if (tipos.includes("Back")) score += 5;
+  if (tipos.includes("Tail")) score += 5;
+  if (axie.class === "Beast" && tipos.includes("Mouth")) score += 10;
+  if (axie.class === "Plant" && tipos.includes("Back")) score += 10;
+  if (axie.class === "Aqua" && tipos.includes("Tail")) score += 10;
+  return Math.min(score, 100);
+}
+
+function mostrarAxies(axies) {
+  const container = document.getElementById("resultados");
+  container.innerHTML = "";
+  const melhores = axies.sort((a,b) => a.auction.currentPriceUSD - b.auction.currentPriceUSD);
+  melhores.forEach(a => {
+    const meta = calcularMetaScore(a);
+    const tag = meta >= 85 && a.auction.currentPriceUSD <= 5
+      ? `<span class="tag raro">🏆 Achado Raro</span>`
+      : meta >= 70
+      ? `<span class="tag meta-alto">🔥 Meta</span>`
+      : "";
+    container.innerHTML += `
+      <div class="axie-card">
+        <img src="${a.image}" alt="${a.name}">
+        <h3>${a.name || "Axie #" + a.id}</h3>
+        <p>Classe: ${a.class}</p>
+        <p>💰 ${parseFloat(a.auction.currentPriceUSD).toFixed(2)} USD</p>
+        <p class="meta">Meta Score: ${meta}</p>
+        ${tag}
+        <p><a href="https://app.axieinfinity.com/marketplace/axies/${a.id}" target="_blank">Ver no Market</a></p>
+      </div>
+    `;
+  });
+}
+
+document.getElementById("buscar").addEventListener("click", buscarAxies);
+buscarAxies(); // busca inicial
+</script>
+</body>
+</html>
